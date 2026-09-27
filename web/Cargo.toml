@@ -1,0 +1,23 @@
+[package]
+name = "tanim-web"
+version = "0.1.0"
+edition = "2021"
+description = "tanim's animations compiled to WebAssembly for the HTML export"
+license = "MIT"
+publish = false
+
+# Its own workspace: build.rs builds it separately from the main crate.
+[workspace]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+tanim = { path = ".." }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

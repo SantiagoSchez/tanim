@@ -1,0 +1,17 @@
+# Build output (the wasm module for --export-html is built into target/wasm)
+/target
+
+# Generated media: rebuild with `make videos`, `make streamdeck` and `make html`
+/videos
+/streamdeck
+/html
+
+# Python caches from scripts/
+__pycache__/
+*.pyc
+
+# OS and editor clutter
+.DS_Store
+.idea/
+.vscode/
+*.swp
