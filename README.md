@@ -12,6 +12,8 @@ tanim            # a random animation
 tanim aurora     # a specific one
 ```
 
+**[Try them in your browser →](https://santiagoschez.github.io/tanim/)** (the same code, compiled to WebAssembly)
+
 - **Procedural and endless.** Nothing is pre-recorded: every run is different, and nothing repeats.
 - **Two pixels per cell.** Everything is drawn with `▀` half blocks, so each terminal cell holds two square pixels in 24-bit color.
 - **Light on the terminal.** Only the cells that change are sent, invisible color changes are skipped, and frames are wrapped in synchronized output, so even busy scenes stay smooth. It starts in about a millisecond.
@@ -111,7 +113,7 @@ Resizing the window restarts the animation at the new size. The animations with 
 tanim --export-html [dir] [names...]   # default: html/, every animation
 ```
 
-This writes `index.html`, with every animation and a picker (deep links like `index.html#aurora` work), plus one standalone page per animation. The pages run the very same Rust code compiled to WebAssembly, so they are endless, different on every load, adapt to the window and take the same keys, plus `+`/`−` for the cell size and `F` for fullscreen. Each page is self-contained (about 570 KB) and opens straight from disk, no server needed.
+The [live demo](https://santiagoschez.github.io/tanim/) is exactly this, rebuilt and published by GitHub Actions on every push. It writes `index.html`, with every animation and a picker (deep links like `index.html#aurora` work), plus one standalone page per animation. The pages run the very same Rust code compiled to WebAssembly, so they are endless, different on every load, adapt to the window and take the same keys, plus `+`/`−` for the cell size and `F` for fullscreen. Each page is self-contained (about 570 KB) and opens straight from disk, no server needed.
 
 ## Videos and Stream Deck screensavers
 
