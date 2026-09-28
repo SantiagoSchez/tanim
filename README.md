@@ -125,12 +125,11 @@ The script in `scripts/` records animations from `tanim --dump` and encodes them
 make videos                  # a WebM per animation in videos/ (2160x1296, VP9)
 make streamdeck MODELS=neo   # looping GIF screensavers in streamdeck/neo/
 python3 scripts/video.py --streamdeck all aurora dungeon
-make streamdeck-publish      # push streamdeck/ to the gh-pages-assets branch for the web version
 ```
 
 The Stream Deck GIFs come at each model's screensaver resolution: `neo` (480x320), `mk2` (480x272), `xl` (768x384), `plus` (800x480) and `plusxl` (1280x800). The virtual terminal is sized so that every half-block pixel maps to whole pixels in the GIF. Since the Stream Deck app keeps only the first 120 frames of a screensaver, each GIF is at most 8 seconds at 15 fps. Simulations never return to an earlier state, so to make them loop the script records extra footage, picks the start and end that look most alike, and cross-fades the last 0.75 s into the frames just before the start: the GIF begins clean and loops without a jump. Set one from Stream Deck → Preferences → Set Screensaver.
 
-The live demo serves these GIFs from the `gh-pages-assets` branch, a single commit that `make streamdeck-publish` force-pushes from your `streamdeck/` (regenerate it first with `make streamdeck`, then run the Pages workflow). The pages look for `streamdeck/<model>/<name>.gif` next to them and only offer the ones they find.
+The live demo's GIFs are made by GitHub Actions and kept in the `gh-pages-assets` branch: on every push to `main`, `scripts/video.py --sync` renders every model for new animations and for the ones whose module changed since their GIFs were made (recorded in `sources.txt` there). Run the workflow by hand to regenerate others, say after changing the rasterizer. The pages look for `streamdeck/<model>/<name>.gif` next to them and only offer the ones they find.
 
 ## Development
 
