@@ -33,8 +33,8 @@ const LAYERS: [(f32, f32); 3] = [(0.55, 0.5), (0.75, 0.72), (1.0, 1.0)];
 const LAYER_ODDS: [f32; 3] = [0.34, 0.33, 0.33];
 /// Share of new flyers that are breakfast guests and loose slices; the rest
 /// are toasters.
-const GUEST_ODDS: f32 = 0.125;
-const TOAST_ODDS: f32 = 0.25;
+const GUEST_ODDS: f32 = 0.05;
+const TOAST_ODDS: f32 = 0.15;
 /// Guests are drawn this much bigger than their flyer's size.
 const GUEST: f32 = 1.45;
 /// Pixels per frame, relative to the flyer's size.
