@@ -1,7 +1,7 @@
 //! `--export-html`: standalone web pages that run the animations in a
 //! browser. build.rs compiles them to WebAssembly; each page embeds that
-//! module (base64) and the player in `web.html`, so it opens from disk with no
-//! server.
+//! module (base64), the favicon and the player in `web.html`, so it opens from
+//! disk with no server.
 
 use std::fs;
 use std::path::Path;
@@ -9,6 +9,7 @@ use tanim::anims::Entry;
 
 const WASM: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/tanim_web.wasm"));
 const PAGE: &str = include_str!("web.html");
+const ICON: &[u8] = include_bytes!("favicon.png");
 
 /// Write `index.html` (every animation, with a picker) and one page per entry
 /// in `pages` into `dir`, returning the paths written.
@@ -18,10 +19,12 @@ pub fn write(dir: &Path, pages: &[&Entry]) -> Result<Vec<String>, String> {
     }
     fs::create_dir_all(dir).map_err(|e| format!("cannot create {}: {e}", dir.display()))?;
     let wasm = base64(WASM);
+    let icon = base64(ICON);
     let page = |title: &str, start: &str, single: bool| {
         PAGE.replace("__TITLE__", title)
             .replace("__START__", start)
             .replace("__SINGLE__", if single { "true" } else { "false" })
+            .replace("__ICON__", &icon)
             .replace("__WASM__", &wasm)
     };
     let mut written = Vec::new();

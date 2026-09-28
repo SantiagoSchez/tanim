@@ -29,7 +29,7 @@ Before finishing any change: the build must have **zero warnings**, `cargo test 
 | `src/canvas.rs` | `Canvas` (cells), `Rgb` helpers and `Screen`, the diffing renderer that emits escape sequences. |
 | `src/anims/` | One module per animation plus `mod.rs` with the `Animation` trait and the `catalog!` macro. |
 | `src/zoom.rs` | Generic digital zoom and pan wrapped around every animation. |
-| `src/export.rs`, `src/web.html` | `--export-html`: standalone pages embedding the wasm module (base64) and the canvas player. |
+| `src/export.rs`, `src/web.html`, `src/favicon.png` | `--export-html`: standalone pages embedding the wasm module and favicon (base64) and the canvas player. |
 | `web/` | Separate crate (its own workspace) exposing the animations to JavaScript as plain `extern "C"` functions. |
 | `build.rs` | Builds `web/` for `wasm32-unknown-unknown` and embeds it; without that target the build succeeds and the export is disabled. |
 | `scripts/video.py` | Rasterizes `--dump` output and encodes WebM videos or Stream Deck GIFs with ffmpeg. |

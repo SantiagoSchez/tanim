@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/logo.png" width="160" alt="tanim logo: northern lights in a terminal window"></p>
+
 # tanim
 
 **Endless, procedural screensaver animations for your terminal.** Twenty-seven of them, from a self-exploring roguelike dungeon to firing neurons, drawn in true color with half-block pixels, in a single native Rust binary with no dependencies beyond `libc`.
