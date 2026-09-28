@@ -113,7 +113,7 @@ Resizing the window restarts the animation at the new size. The animations with 
 tanim --export-html [dir] [names...]   # default: html/, every animation
 ```
 
-The [live demo](https://santiagoschez.github.io/tanim/) is exactly this, rebuilt and published by GitHub Actions on every push. It writes `index.html`, with every animation and a picker (deep links like `index.html#aurora` work), plus one standalone page per animation. The pages run the very same Rust code compiled to WebAssembly, so they are endless, different on every load, adapt to the window and take the same keys, plus `+`/`−` for the cell size and `F` for fullscreen. Each page is self-contained (about 570 KB) and opens straight from disk, no server needed.
+The [live demo](https://santiagoschez.github.io/tanim/) is exactly this, rebuilt and published by GitHub Actions on every push. It writes `index.html`, with every animation and a picker (deep links like `index.html#aurora` work), plus one standalone page per animation. The pages run the very same Rust code compiled to WebAssembly, so they are endless, different on every load, adapt to the window and take the same keys, plus `+`/`−` for the cell size and `F` for fullscreen. Each page is self-contained (about 570 KB) and opens straight from disk, no server needed. On the live demo, the `⋯` button next to each animation downloads it as a Stream Deck screensaver for any model.
 
 ## Videos and Stream Deck screensavers
 
@@ -123,9 +123,12 @@ The script in `scripts/` records animations from `tanim --dump` and encodes them
 make videos                  # a WebM per animation in videos/ (2160x1296, VP9)
 make streamdeck MODELS=neo   # looping GIF screensavers in streamdeck/neo/
 python3 scripts/video.py --streamdeck all aurora dungeon
+make streamdeck-publish      # push streamdeck/ to the gh-pages-assets branch for the web version
 ```
 
 The Stream Deck GIFs come at each model's screensaver resolution: `neo` (480x320), `mk2` (480x272), `xl` (768x384), `plus` (800x480) and `plusxl` (1280x800). The virtual terminal is sized so that every half-block pixel maps to whole pixels in the GIF. Since the Stream Deck app keeps only the first 120 frames of a screensaver, each GIF is at most 8 seconds at 15 fps. Simulations never return to an earlier state, so to make them loop the script records extra footage, picks the start and end that look most alike, and cross-fades the last 0.75 s into the frames just before the start: the GIF begins clean and loops without a jump. Set one from Stream Deck → Preferences → Set Screensaver.
+
+The live demo serves these GIFs from the `gh-pages-assets` branch, a single commit that `make streamdeck-publish` force-pushes from your `streamdeck/` (regenerate it first with `make streamdeck`, then run the Pages workflow). The pages look for `streamdeck/<model>/<name>.gif` next to them and only offer the ones they find.
 
 ## Development
 

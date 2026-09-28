@@ -15,6 +15,7 @@ make install                                 # ~/.local/bin/tanim
 make html                                    # web pages in html/
 make videos                                  # WebM per animation in videos/ (needs Python + ffmpeg)
 make streamdeck MODELS=neo                   # Stream Deck GIFs in streamdeck/<model>/
+make streamdeck-publish                      # force-push streamdeck/ to the gh-pages-assets branch
 ```
 
 Before finishing any change: the build must have **zero warnings**, `cargo test --release` must pass, and `tanim --check` must run the touched animations without panicking. Look at the result too: render frames to PNG from `--dump` (the rasterizer in `scripts/video.py` can be imported for this) and check them by eye, because most bugs here are visual.
@@ -32,7 +33,7 @@ Before finishing any change: the build must have **zero warnings**, `cargo test 
 | `web/` | Separate crate (its own workspace) exposing the animations to JavaScript as plain `extern "C"` functions. |
 | `build.rs` | Builds `web/` for `wasm32-unknown-unknown` and embeds it; without that target the build succeeds and the export is disabled. |
 | `scripts/video.py` | Rasterizes `--dump` output and encodes WebM videos or Stream Deck GIFs with ffmpeg. |
-| `.github/workflows/pages.yml` | Rebuilds and publishes the web version to GitHub Pages on every push to `main`. |
+| `.github/workflows/pages.yml` | Rebuilds and publishes the web version to GitHub Pages on every push to `main`, adding the Stream Deck GIFs from the `gh-pages-assets` branch at `streamdeck/`. |
 
 ## How rendering works
 
@@ -57,6 +58,7 @@ Tests live next to the code (`#[cfg(test)] mod tests`): for example `dog` checks
 - `web/src/lib.rs` exports `count`, `name_ptr`/`name_len`, `desc_ptr`/`desc_len`, `fps`, `start(i, w, h, seed)`, `step() -> *const u32` (per cell: char, fg `0xRRGGBB`, bg `0xRRGGBB`) and `key(k)` (1 up, 2 down, 3-6 pan left/right/up/down, 7 space). Keep `src/web.html` in sync when changing them.
 - The module must stay import-free (`WebAssembly.Module.imports` is empty) so pages work from `file://` without a server. Check with Node after changing `web/`.
 - The player draws half blocks geometrically on a canvas at whole device pixels, repaints only changed cells and drops frames rather than slowing down.
+- Its `⋯` options menu offers `streamdeck/<model>/<name>.gif` for download, checking each with a `HEAD` request and hiding the button when none is there (always the case from `file://`). The GIFs are not built in CI: `make streamdeck-publish` pushes the local `streamdeck/` as an orphan commit to `gh-pages-assets`, and the Pages workflow checks that branch out into `site/streamdeck`. Keep the model list in `src/web.html` in sync with `STREAMDECK` in `scripts/video.py`.
 
 ## Videos and Stream Deck GIFs
 

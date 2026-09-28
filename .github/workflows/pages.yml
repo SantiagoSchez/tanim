@@ -1,5 +1,6 @@
 # Publishes the web version of the animations (tanim --export-html) to GitHub
-# Pages on every push to main.
+# Pages on every push to main, with the Stream Deck GIFs from the
+# gh-pages-assets branch (`make streamdeck-publish`) served at streamdeck/.
 name: Deploy web version
 
 on:
@@ -28,6 +29,12 @@ jobs:
         run: cargo build --release
       - name: Export the web pages
         run: ./target/release/tanim --export-html site
+      - name: Add the Stream Deck GIFs
+        uses: actions/checkout@v7
+        with:
+          ref: gh-pages-assets
+          path: site/streamdeck
+          persist-credentials: false
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:
