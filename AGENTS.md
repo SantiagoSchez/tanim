@@ -56,7 +56,7 @@ Before finishing any change: the build must have **zero warnings**, `cargo test 
 1. Work on a branch of its own, `anim/<name>`, created from an up-to-date `main`, and commit there (module, catalog entry, README row, tests).
 2. Leave it for review by whoever asked for it before anything leaves the machine: do not push or open a pull request until they say so, and apply their feedback as further commits on the same branch.
 3. Once approved, push the branch and open a pull request against `main`. Never merge it or push to `main` directly.
-4. Contributors do not need to generate Stream Deck GIFs. The live demo only offers downloads for GIFs that exist, and they are published separately with `make streamdeck-publish`, which needs push access to the repository.
+4. Contributors do not need to generate Stream Deck GIFs: the live demo's are built and published from `main`, and it only offers downloads for GIFs that exist.
 
 Tests live next to the code (`#[cfg(test)] mod tests`): for example `dog` checks that its camera never crops the dog, `zoom` that 1x is a pass-through, and `canvas` the transparency and deadband rules. Add one when a behaviour can regress silently.
 
