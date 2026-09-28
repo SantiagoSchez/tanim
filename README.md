@@ -143,6 +143,14 @@ cargo test --release
 
 The animations and the canvas they draw on are a library (`src/lib.rs`). The terminal binary plays them; the `web/` crate exposes them to JavaScript, and `build.rs` compiles it to WebAssembly and embeds it in `tanim` for `--export-html`. Each animation lives in `src/anims/<name>.rs` and exposes `pub fn new(w, h, rng) -> Box<dyn Animation>`, drawing into a cell canvas (usually through a buffer of half-block pixels). To add one, create the module and register it in the `catalog!` macro in `src/anims/mod.rs` with its frame rate and description.
 
+## Contributing
+
+New animations are the best kind of contribution, and ideas are just as welcome.
+
+- **Have an idea?** [Open an issue](https://github.com/SantiagoSchez/tanim/issues/new) describing what it would show: a scene, a simulation, a classic screensaver you miss.
+- **Want to build one?** Send a pull request. Add the module and register it as described above, add a row to the [catalog](#catalog), and before opening it make sure the build has no warnings, `cargo test --release` passes and `tanim --check <name>` runs it down to 1x1. Keep it light on the terminal: check the `B/f` column of `--check`, since bytes sent per frame are what really costs. [`AGENTS.md`](AGENTS.md) has the details on how rendering works and the conventions to follow.
+- **Found a bug?** Issues are welcome too, ideally with your terminal, its size and the animation.
+
 ## License
 
 [MIT](LICENSE)
