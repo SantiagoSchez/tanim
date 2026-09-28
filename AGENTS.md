@@ -51,6 +51,13 @@ Before finishing any change: the build must have **zero warnings**, `cargo test 
 5. Use only the `Rng` passed in: no `std::time`, `std::process` or other OS calls inside `src/anims`, `canvas`, `rng` or `zoom`, because that code also runs as wasm. `Rng::new(seed)` must keep giving a stream per seed (`--seed` reproducibility is relied on by the scripts).
 6. Keys: `Animation::key(&mut self, Key)` receives `Space` and, for animations with `has_camera() == true` (only `dog`), the zoom keys too. Everything else gets zoom and pan from `src/zoom.rs`. `key()` has no rng: set a flag and act on it in the next `step()` (see `dungeon`).
 
+### Workflow for new animations
+
+1. Each requested animation goes on its own branch, `anim/<name>`, created from an up-to-date `main`. Commit the work there (animation, catalog entry, README row, tests) and stop: do not push or open a PR yet.
+2. The maintainer reviews it locally (`./target/release/tanim <name>`, `make html` for the web version) and may ask for changes on the same branch.
+3. Only when they say it is OK, push the branch and open a PR against `main` with `gh pr create`. Never merge it or push to `main` yourself.
+4. The web version only offers Stream Deck downloads for GIFs that exist, so a new animation has none until `make streamdeck` and `make streamdeck-publish` are run after the merge; do that, or refresh `docs/gallery/`, only when asked.
+
 Tests live next to the code (`#[cfg(test)] mod tests`): for example `dog` checks that its camera never crops the dog, `zoom` that 1x is a pass-through, and `canvas` the transparency and deadband rules. Add one when a behaviour can regress silently.
 
 ## Web build
