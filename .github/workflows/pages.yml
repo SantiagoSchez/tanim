@@ -1,24 +1,74 @@
 # Publishes the web version of the animations (tanim --export-html) to GitHub
-# Pages on every push to main, with the Stream Deck GIFs from the
-# gh-pages-assets branch (`make streamdeck-publish`) served at streamdeck/.
+# Pages on every push to main. First it brings the Stream Deck GIFs kept in
+# the gh-pages-assets branch up to date (scripts/video.py --sync): animations
+# with no GIFs yet, or whose module changed since theirs were made, get new
+# ones for every model. Run it by hand to regenerate others too.
 name: Deploy web version
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      regenerate:
+        description: Stream Deck GIFs to regenerate as well (animation names separated by spaces, or all)
+        required: false
+        default: ""
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
+# One run at a time and never cancelled halfway: whatever a skipped run
+# missed, the next one catches up on, since the GIFs are compared with the
+# modules they were made from rather than with the last push.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
+  streamdeck:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check out the published GIFs
+        uses: actions/checkout@v7
+        with:
+          ref: gh-pages-assets
+          path: assets
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build tanim
+        run: cargo build --release
+      - name: Install ffmpeg, fonts and the Python packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg fonts-dejavu-core fonts-ipafont-gothic
+          python3 -m venv .venv
+          .venv/bin/pip install --quiet pillow numpy fonttools
+      - name: Bring the GIFs up to date
+        env:
+          REGENERATE: ${{ inputs.regenerate }}
+        # REGENERATE is split into names on purpose; video.py rejects unknown ones.
+        run: .venv/bin/python scripts/video.py --sync assets --seed 7 $REGENERATE
+      - name: Publish them
+        working-directory: assets
+        run: |
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Stream Deck GIFs already up to date"
+            exit 0
+          fi
+          export GIT_AUTHOR_NAME="github-actions[bot]" GIT_AUTHOR_EMAIL="41898282+github-actions[bot]@users.noreply.github.com"
+          export GIT_COMMITTER_NAME="$GIT_AUTHOR_NAME" GIT_COMMITTER_EMAIL="$GIT_AUTHOR_EMAIL"
+          # A single orphan commit, force-pushed, so old GIFs do not pile up.
+          commit=$(git commit-tree "$(git write-tree)" -m "Stream Deck GIFs from ${GITHUB_SHA::7}")
+          git push --force origin "$commit:refs/heads/gh-pages-assets"
+
   build:
+    needs: streamdeck
+    # Publish the web version even if the GIFs could not be updated.
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -42,6 +92,7 @@ jobs:
 
   deploy:
     needs: build
+    if: ${{ !cancelled() && needs.build.result == 'success' }}
     runs-on: ubuntu-latest
     environment:
       name: github-pages

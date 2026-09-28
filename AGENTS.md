@@ -15,7 +15,6 @@ make install                                 # ~/.local/bin/tanim
 make html                                    # web pages in html/
 make videos                                  # WebM per animation in videos/ (needs Python + ffmpeg)
 make streamdeck MODELS=neo                   # Stream Deck GIFs in streamdeck/<model>/
-make streamdeck-publish                      # force-push streamdeck/ to the gh-pages-assets branch
 ```
 
 Before finishing any change: the build must have **zero warnings**, `cargo test --release` must pass, and `tanim --check` must run the touched animations without panicking. Look at the result too: render frames to PNG from `--dump` (the rasterizer in `scripts/video.py` can be imported for this) and check them by eye, because most bugs here are visual.
@@ -33,7 +32,7 @@ Before finishing any change: the build must have **zero warnings**, `cargo test 
 | `web/` | Separate crate (its own workspace) exposing the animations to JavaScript as plain `extern "C"` functions. |
 | `build.rs` | Builds `web/` for `wasm32-unknown-unknown` and embeds it; without that target the build succeeds and the export is disabled. |
 | `scripts/video.py` | Rasterizes `--dump` output and encodes WebM videos or Stream Deck GIFs with ffmpeg. |
-| `.github/workflows/pages.yml` | Rebuilds and publishes the web version to GitHub Pages on every push to `main`, adding the Stream Deck GIFs from the `gh-pages-assets` branch at `streamdeck/`. |
+| `.github/workflows/pages.yml` | On every push to `main`: brings the Stream Deck GIFs in the `gh-pages-assets` branch up to date, then rebuilds the web version with them at `streamdeck/` and publishes it to GitHub Pages. |
 
 ## How rendering works
 
@@ -58,13 +57,14 @@ Tests live next to the code (`#[cfg(test)] mod tests`): for example `dog` checks
 - `web/src/lib.rs` exports `count`, `name_ptr`/`name_len`, `desc_ptr`/`desc_len`, `fps`, `start(i, w, h, seed)`, `step() -> *const u32` (per cell: char, fg `0xRRGGBB`, bg `0xRRGGBB`) and `key(k)` (1 up, 2 down, 3-6 pan left/right/up/down, 7 space). Keep `src/web.html` in sync when changing them.
 - The module must stay import-free (`WebAssembly.Module.imports` is empty) so pages work from `file://` without a server. Check with Node after changing `web/`.
 - The player draws half blocks geometrically on a canvas at whole device pixels, repaints only changed cells and drops frames rather than slowing down.
-- Its `⋯` options menu offers `streamdeck/<model>/<name>.gif` for download, checking each with a `HEAD` request and hiding the button when none is there (always the case from `file://`). The GIFs are not built in CI: `make streamdeck-publish` pushes the local `streamdeck/` as an orphan commit to `gh-pages-assets`, and the Pages workflow checks that branch out into `site/streamdeck`. Keep the model list in `src/web.html` in sync with `STREAMDECK` in `scripts/video.py`.
+- Its `⋯` options menu offers `streamdeck/<model>/<name>.gif` for download, checking each with a `HEAD` request and hiding the button when none is there (always the case from `file://`). The Pages workflow checks the `gh-pages-assets` branch out into `site/streamdeck` after updating it. Keep the model list in `src/web.html` in sync with `STREAMDECK` in `scripts/video.py`.
 
 ## Videos and Stream Deck GIFs
 
 - `scripts/video.py` defaults: videos from a 240x72 virtual terminal at scale 1 (2160x1296), two-pass VP9 at CRF 28, up to 30 fps. Per-animation `TWEAKS` set warm-up, length, zoom or CRF.
 - Stream Deck GIFs (`--streamdeck`) use each model's screensaver canvas: `neo` 480x320 (what the Stream Deck app itself converts to), `mk2` 480x272, `xl` 768x384, `plus` 800x480, `plusxl` 1280x800, with the cell width chosen so that the half-block pixels tile exactly.
 - **The Stream Deck app keeps only the first 120 frames** (8 s at 15 fps) of a screensaver, so GIFs must never exceed that. Loops are made seamless by recording extra footage, picking the most alike start and end, and cross-fading the last 0.75 s into the frames before the start (the GIF begins clean). They are re-encoded with fewer frames above 3 MB.
+- The published GIFs are made in CI, never pushed by hand: `video.py --sync DIR` renders every model for animations that miss a GIF or whose `src/anims/<name>.rs` blob hash differs from the one in `DIR/sources.txt` (plus any names given, or `all`), drops GIFs of animations that left the catalog and rewrites the manifest. The workflow then force-pushes the result as a single orphan commit. Changes outside the module (canvas, rasterizer) are not detected: regenerate with a manual run. Fonts are looked up in macOS paths and in the Debian packages CI installs (`fonts-dejavu-core`, `fonts-ipafont-gothic`).
 
 ## Conventions
 

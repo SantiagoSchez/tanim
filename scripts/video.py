@@ -12,6 +12,7 @@ palette for GIFs.
     python3 scripts/video.py dog --seed 42    # same video every time
     python3 scripts/video.py --streamdeck neo,mk2   # Stream Deck GIFs
     python3 scripts/video.py --streamdeck all aurora
+    python3 scripts/video.py --sync DIR   # update the published GIFs (CI)
 
 Requires Pillow, numpy, fontTools and ffmpeg.
 """
@@ -64,13 +65,18 @@ SCALE = 2
 CW, CH, FONT_SIZE = BASE_CW * SCALE, BASE_CH * SCALE, BASE_FONT * SCALE
 SS = 4  # supersampling for geometric glyphs
 
-# Glyph fallback chain: first font whose cmap has the char wins.
+# Glyph fallback chain: first font whose cmap has the char wins. macOS paths
+# first, then the Debian/Ubuntu packages fonts-dejavu-core and
+# fonts-ipafont-gothic (half-width katakana for matrix) that CI installs.
 FONTS = [
     ("~/Library/Fonts/DejaVuSansMono.ttf", 0),
+    ("/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf", 0),
     ("/System/Library/Fonts/Menlo.ttc", 0),
     ("~/Library/Fonts/DejaVuSans.ttf", 0),
+    ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 0),
     ("/System/Library/Fonts/Apple Symbols.ttf", 0),
     ("/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc", 0),
+    ("/usr/share/fonts/opentype/ipafont-gothic/ipag.ttf", 0),
 ]
 
 # Per-animation tweaks: steps to simulate before recording (so scenes that
@@ -316,6 +322,53 @@ def render_streamdeck(name, model, seconds, max_fps, seed, glyphs, out):
     return fps, secs
 
 
+def render_streamdecks(models, names, out, seconds, max_fps, seed):
+    """GIFs for every model and animation given, in out/<model>/<name>.gif."""
+    for m in models:
+        configure_cells(STREAMDECK[m][2])
+        glyphs = Glyphs()
+        os.makedirs(os.path.join(out, m), exist_ok=True)
+        for name in names:
+            path = os.path.join(out, m, f"{name}.gif")
+            fps, secs = render_streamdeck(name, m, seconds, max_fps, seed, glyphs, path)
+            print(f"{m:7} {name:10} {os.path.getsize(path) / 1e6:4.1f} MB  {fps:2} fps {secs:4.1f} s  {os.path.relpath(path)}", flush=True)
+
+
+def module_hash(name):
+    """Git blob hash of the animation's module at HEAD, or "" if unknown."""
+    r = subprocess.run(["git", "rev-parse", f"HEAD:src/anims/{name}.rs"], cwd=ROOT, capture_output=True, text=True)
+    return r.stdout.strip() if r.returncode == 0 else ""
+
+
+def sync(out, force, seconds, max_fps, seed):
+    """Bring the published Stream Deck GIFs in `out` up to date: render every
+    model for the animations that miss any GIF, whose module changed since
+    they were made (as recorded in out/sources.txt) or that are in `force`,
+    and drop the GIFs of animations no longer in the catalog. GIFs with no
+    record yet are taken as current."""
+    names = catalog()
+    manifest = os.path.join(out, "sources.txt")
+    made = {}
+    if os.path.exists(manifest):
+        for line in open(manifest):
+            name, _, blob = line.strip().partition(" ")
+            if name:
+                made[name] = blob
+    now = {n: module_hash(n) for n in names}
+    complete = lambda n: all(os.path.exists(os.path.join(out, m, f"{n}.gif")) for m in STREAMDECK)
+    todo = [n for n in names if n in force or not complete(n) or made.get(n, now[n]) != now[n]]
+    for m in STREAMDECK:
+        d = os.path.join(out, m)
+        for f in sorted(os.listdir(d)) if os.path.isdir(d) else []:
+            if f.endswith(".gif") and f[:-4] not in names:
+                os.remove(os.path.join(d, f))
+                print(f"removed {m}/{f}")
+    print(f"regenerating: {' '.join(todo) or 'nothing'}", flush=True)
+    render_streamdecks(list(STREAMDECK), todo, out, seconds, max_fps, seed)
+    with open(manifest, "w") as f:
+        f.writelines(f"{n} {now[n]}\n" for n in names if complete(n))
+
+
 def lossless_args(out):
     return ["-c:v", "ffv1", "-level", "3", "-pix_fmt", "bgr0", out]
 
@@ -421,7 +474,8 @@ def render(name, w, h, seconds, max_fps, seed, glyphs, out, encode=lossless_args
 
 def main():
     ap = argparse.ArgumentParser(description=(__doc__ or "").split("\n")[0])
-    ap.add_argument("names", nargs="*", help="animations to render (default: all)")
+    ap.add_argument("names", nargs="*", help="animations to render (default: all); with --sync, "
+                    "ones to regenerate even if up to date, or all")
     # A big virtual terminal gives the animations plenty of pixels to draw
     # with; at scale 1 that is a 2160x1296 video.
     ap.add_argument("--size", default="240x72", help="terminal size in cells (default 240x72)")
@@ -430,27 +484,28 @@ def main():
     ap.add_argument("--streamdeck", metavar="MODELS",
                     help="Stream Deck GIFs instead of videos: comma-separated "
                          f"{', '.join(STREAMDECK)} or all")
+    ap.add_argument("--sync", metavar="DIR",
+                    help="update the Stream Deck GIFs published in DIR (every model): new animations, "
+                         "changed modules and the names given")
     ap.add_argument("--scale", type=int, default=1, help="pixels per cell unit (default 1)")
     ap.add_argument("--seed", type=int, help="fixed seed, for videos that come out the same every time")
     args = ap.parse_args()
     w, h = map(int, args.size.split("x"))
     names = catalog()
+    if args.sync and args.names == ["all"]:
+        args.names = names
     for n in args.names:
         if n not in names:
             sys.exit(f"video.py: unknown animation '{n}'")
+    if args.sync:
+        sync(os.path.abspath(args.sync), set(args.names), args.seconds or 8, args.fps or 15, args.seed)
+        return
     if args.streamdeck:
         models = list(STREAMDECK) if args.streamdeck == "all" else args.streamdeck.split(",")
         for m in models:
             if m not in STREAMDECK:
                 sys.exit(f"video.py: unknown Stream Deck model '{m}' (choose from {', '.join(STREAMDECK)})")
-        for m in models:
-            configure_cells(STREAMDECK[m][2])
-            glyphs = Glyphs()
-            os.makedirs(os.path.join(STREAMDECK_OUT, m), exist_ok=True)
-            for name in args.names or names:
-                path = os.path.join(STREAMDECK_OUT, m, f"{name}.gif")
-                fps, secs = render_streamdeck(name, m, args.seconds or 8, args.fps or 15, args.seed, glyphs, path)
-                print(f"{m:7} {name:10} {os.path.getsize(path) / 1e6:4.1f} MB  {fps:2} fps {secs:4.1f} s  {os.path.relpath(path, ROOT)}")
+        render_streamdecks(models, args.names or names, STREAMDECK_OUT, args.seconds or 8, args.fps or 15, args.seed)
         return
     configure(args.scale)
     os.makedirs(OUT, exist_ok=True)
