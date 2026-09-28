@@ -2,7 +2,7 @@
 
 # tanim
 
-**Endless, procedural screensaver animations for your terminal.** Twenty-seven of them, from a self-exploring roguelike dungeon to firing neurons, drawn in true color with half-block pixels, in a single native Rust binary with no dependencies beyond `libc`.
+**Endless, procedural screensaver animations for your terminal.** More than twenty of them, from a self-exploring roguelike dungeon to firing neurons, drawn in true color with half-block pixels, in a single native Rust binary with no dependencies beyond `libc`.
 
 <p align="center">
   <img src="docs/gallery/aquarium.gif" width="49%" alt="aquarium: pixel-art fish, bubbles and swaying seaweed">
