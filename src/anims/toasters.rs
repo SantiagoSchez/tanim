@@ -2,8 +2,10 @@
 //! flapping feathered wings, some with a slice of toast in the slot, drift
 //! diagonally down across a black sky together with loose slices of toast.
 //!
-//! Everything is drawn procedurally in half-block pixels (a shaded rounded
-//! body, a fan of capsule feathers, a bread-shaped slice), so the same shapes
+//! Everything is drawn procedurally in half-block pixels, in a fixed
+//! three-quarter view like the original: a box whose long side, top (with two
+//! slots) and leading end each get their own chrome shading, fans of capsule
+//! feathers for wings, and slices with a little thickness. So the same shapes
 //! work at any size. Three depth layers give parallax: far ones are smaller,
 //! slower and dimmer. Flyers in a layer share its speed, so once spawned apart
 //! they never collide, and each layer is drawn over the ones behind it. Space
@@ -76,11 +78,12 @@ struct Toasters {
 }
 
 /// Area a flyer can cover, as (x, y, w, h) from its corner: the toaster's
-/// raised wings reach up and back, the slice in its slot sticks out on top.
+/// top and near end recede up and to the left, its raised wings reach up and
+/// back, and a slice of toast stands out of each slot.
 fn extent(kind: &Kind, s: f32) -> (f32, f32, f32, f32) {
     match kind {
-        Kind::Toaster { .. } => (0.0, -0.8 * s, 1.72 * s, 1.65 * s),
-        Kind::Toast => (0.0, 0.0, 0.72 * s, 0.66 * s),
+        Kind::Toaster { .. } => (-0.3 * s, -1.2 * s, 2.2 * s, 1.95 * s),
+        Kind::Toast => (-0.1 * s, -0.1 * s, 0.82 * s, 0.76 * s),
     }
 }
 
@@ -112,28 +115,34 @@ fn rounded(i: i32, j: i32, w: i32, h: i32, rt: i32, rb: i32) -> bool {
 }
 
 /// A slice of bread: a rounded top over a slightly narrower base, crust
-/// around a face that darkens a little towards it.
-fn draw_slice(px: &mut [Rgb], w: usize, ph: usize, x0: i32, y0: i32, tw: i32, th: i32, (face, crust): (Rgb, Rgb), dim: f32) {
+/// around a face that darkens a little towards it. Rows from `clip` down are
+/// left out (hidden in a slot), and `thick` pixels of crust stack up and to
+/// the left behind the face, the slice's own depth.
+fn draw_slice(px: &mut [Rgb], w: usize, ph: usize, x0: i32, y0: i32, tw: i32, th: i32, (face, crust): (Rgb, Rgb), clip: i32, thick: i32, dim: f32) {
     let r = (tw / 3).min(th * 2 / 5).max(1);
     let neck = (th as f32 * 0.38).round() as i32;
     let inset = i32::from(tw >= 7);
     let inside = |i: i32, j: i32| {
         i >= 0 && j >= 0 && i < tw && j < th && rounded(i, j, tw, th, r, 1) && (j < neck || (i >= inset && i < tw - inset))
     };
-    for j in 0..th {
-        for i in 0..tw {
-            if !inside(i, j) {
-                continue;
+    for k in (0..=thick).rev() {
+        for j in 0..th.min(clip.saturating_sub(y0).saturating_add(k)) {
+            for i in 0..tw {
+                if !inside(i, j) {
+                    continue;
+                }
+                let edge = |d: i32| !inside(i - d, j) || !inside(i + d, j) || !inside(i, j - d) || !inside(i, j + d);
+                let c = if k > 0 {
+                    crust.scale(0.8)
+                } else if edge(1) {
+                    crust
+                } else if tw >= 8 && edge(2) {
+                    face.lerp(crust, 0.3)
+                } else {
+                    face
+                };
+                put(px, w, ph, x0 + i - k, y0 + j - k, c, dim);
             }
-            let edge = |d: i32| !inside(i - d, j) || !inside(i + d, j) || !inside(i, j - d) || !inside(i, j + d);
-            let c = if edge(1) {
-                crust
-            } else if tw >= 8 && edge(2) {
-                face.lerp(crust, 0.3)
-            } else {
-                face
-            };
-            put(px, w, ph, x0 + i, y0 + j, c, dim);
         }
     }
 }
@@ -146,7 +155,7 @@ fn draw_wing(px: &mut [Rgb], w: usize, ph: usize, pivot: (f32, f32), s: f32, a: 
     // (start, end, radius) of each capsule, front to back: covert first.
     let mut caps = Vec::with_capacity(FEATHERS.len() + 1);
     let ray = |ang: f32, len: f32| (pivot.0 + ang.cos() * len * s, pivot.1 - ang.sin() * len * s);
-    caps.push((pivot, ray(a - 0.3, 0.38), (s * 0.19).max(0.75)));
+    caps.push((pivot, ray(a - 0.3, 0.3), (s * 0.14).max(0.75)));
     for (i, len) in FEATHERS.iter().enumerate() {
         caps.push((pivot, ray(a - i as f32 * 0.22, *len), (s * 0.1).max(0.75)));
     }
@@ -185,48 +194,74 @@ fn draw_wing(px: &mut [Rgb], w: usize, ph: usize, pivot: (f32, f32), s: f32, a: 
     }
 }
 
-/// A chrome toaster facing left with its body's corner at (ox, oy): the far
-/// wing, the slice in the slot, the body and then the near wing.
+/// A chrome toaster in three-quarter view, flying left: its long side faces
+/// us with the body's corner at (ox, oy), and the top (two slots) and the
+/// leading end recede up and to the left. Drawn back to front: far wing, body,
+/// the slices standing in the slots, near wing.
 fn draw_toaster(px: &mut [Rgb], w: usize, ph: usize, ox: i32, oy: i32, s: f32, flap: f32, toast: Option<(Rgb, Rgb)>, dim: f32) {
-    let bw = (s.round() as i32).max(4);
-    let bh = ((s * 0.78).round() as i32).max(3);
+    let len = (s.round() as i32).max(4);
+    let hgt = ((s * 0.62).round() as i32).max(3);
+    // Depth offset of the far side.
+    let (ddx, ddy) = (((s * 0.28).round() as i32).max(1), ((s * 0.25).round() as i32).max(1));
     let a = 0.55 + 0.9 * flap.sin();
-    let pivot = (ox as f32 + 0.62 * s, oy as f32 + 0.28 * s);
-    draw_wing(px, w, ph, (pivot.0 + 0.1 * s, pivot.1 - 0.05 * s), s, a, dim * 0.62);
-    if let Some(t) = toast {
-        let (tw, th) = (((bw as f32) * 0.56).round() as i32, ((bh as f32) * 0.7).round() as i32);
-        let x0 = ox + ((bw as f32) * 0.18).round() as i32;
-        draw_slice(px, w, ph, x0, oy - (th * 9 / 20).max(1), tw.max(2), th.max(2), t, dim);
-    }
+    let pivot = (ox as f32 + 0.74 * s, oy as f32 + 0.15 * hgt as f32);
+    draw_wing(px, w, ph, (pivot.0 - ddx as f32, pivot.1 - ddy as f32), s, a, dim * 0.62);
 
-    let top_h = ((bh as f32 * 0.18).round() as i32).max(1);
-    let slot = (top_h - 1) / 2;
-    let base_h = ((bh as f32 * 0.1).round() as i32).max(1);
-    let front = (bh - top_h - base_h).max(1);
-    let (rt, rb) = ((s * 0.2).round() as i32, (s * 0.08).round() as i32);
-    let lever = ((bw as f32) * 0.8).round() as i32;
-    let knob = top_h + (front as f32 * 0.45) as i32;
-    let shine = ((bw as f32) * 0.14).round() as i32;
-    for j in 0..bh {
-        for i in 0..bw {
-            if !rounded(i, j, bw, bh, rt, rb) {
-                continue;
-            }
-            let u = (i as f32 + 0.5) / bw as f32;
-            let c = if j < top_h {
-                if j == slot && u >= 0.2 && u < 0.72 { SLOT } else { TOP }
-            } else if j >= bh - base_h {
-                BASE
-            } else if bw >= 8 && (i == lever || i == lever + 1) && j == knob {
-                LEVER
-            } else if bw >= 8 && i == lever && (j - knob).abs() <= front / 4 {
-                LEVER.lerp(CHROME[4], 0.3)
+    let (lf, hf, df) = (len as f32, hgt as f32, (ddx as f32, ddy as f32));
+    let base = ((hf * 0.12).round() as i32).max(1);
+    let lever = (lf * 0.86).round() as i32;
+    let knob = (hf * 0.45) as i32;
+    let shine = (lf * 0.1).round() as i32;
+    for j in -ddy..hgt {
+        for i in -ddx..len {
+            let (x, y) = (i as f32 + 0.5, j as f32 + 0.5);
+            let c = if i >= 0 && j >= 0 {
+                // The long side: chrome bands, darker towards both ends.
+                let u = x / lf;
+                if j >= hgt - base {
+                    BASE
+                } else if len >= 8 && (i == lever || i == lever + 1) && j == knob {
+                    LEVER
+                } else if len >= 8 && i == lever && (j - knob).abs() <= hgt / 5 {
+                    LEVER.lerp(CHROME[4], 0.3)
+                } else {
+                    let v = j as f32 / (hgt - base - 1).max(1) as f32;
+                    let c = Rgb::gradient(&CHROME, v).scale(1.0 - 0.3 * (2.0 * u - 1.0).abs().powi(4));
+                    if j == 0 {
+                        c.lerp(Rgb::WHITE, 0.6)
+                    } else if len >= 10 && i == shine {
+                        c.lerp(Rgb::WHITE, 0.45)
+                    } else {
+                        c
+                    }
+                }
             } else {
-                let v = (j - top_h) as f32 / (front - 1).max(1) as f32;
-                let c = Rgb::gradient(&CHROME, v).scale(1.0 - 0.3 * (2.0 * u - 1.0).abs().powi(4));
-                if bw >= 10 && i == shine { c.lerp(Rgb::WHITE, 0.5) } else { c }
+                // The top, where b runs from the near edge (0) to the far one
+                // (1), else the leading end, in shade.
+                let (bt, ut) = (-y / df.1, (x - y / df.1 * df.0) / lf);
+                let (be, ve) = (-x / df.0, (y - x / df.0 * df.1) / hf);
+                if j < 0 && (0.0..=1.0).contains(&bt) && (0.0..=1.0).contains(&ut) {
+                    let slot = (0.22..0.4).contains(&bt) || (0.6..0.78).contains(&bt);
+                    if slot && (0.12..0.88).contains(&ut) { SLOT } else { TOP.lerp(CHROME[2], bt * 0.35) }
+                } else if i < 0 && (0.0..=1.0).contains(&be) && (0.0..=1.0).contains(&ve) {
+                    if ve >= 1.0 - base as f32 / hf { BASE.scale(0.8) } else { Rgb::gradient(&CHROME, ve).scale(0.62) }
+                } else {
+                    continue;
+                }
             };
             put(px, w, ph, ox + i, oy + j, c, dim);
+        }
+    }
+
+    if let Some(t) = toast {
+        // One slice per slot, far one first; each stands in its slot's plane
+        // and the top hides what is below the slot.
+        let tw = ((lf * 0.6).round() as i32).max(2);
+        let th = ((hf * 0.75).round() as i32).max(2);
+        let rise = ((hf * 0.38).round() as i32).max(1);
+        for b in [0.69, 0.31] {
+            let (sx, sy) = (ox - (b * df.0).round() as i32, oy - (b * df.1).round() as i32);
+            draw_slice(px, w, ph, sx + (lf * 0.2).round() as i32, sy - rise, tw, th, t, sy, 0, dim);
         }
     }
     draw_wing(px, w, ph, pivot, s, a, dim);
@@ -343,7 +378,8 @@ impl Animation for Toasters {
                 }
                 Kind::Toast => {
                     let (tw, th) = (((s * 0.72).round() as i32).max(3), ((s * 0.66).round() as i32).max(3));
-                    draw_slice(&mut self.px, self.w, self.ph, x, y, tw, th, toast, dim)
+                    let thick = ((s * 0.08).round() as i32).max(1);
+                    draw_slice(&mut self.px, self.w, self.ph, x, y, tw, th, toast, i32::MAX, thick, dim)
                 }
             }
         }
