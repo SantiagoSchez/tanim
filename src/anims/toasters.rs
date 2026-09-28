@@ -269,7 +269,7 @@ fn draw_toaster(px: &mut [Rgb], w: usize, ph: usize, ox: i32, oy: i32, s: f32, f
 
 pub fn new(w: usize, h: usize, rng: &mut Rng) -> Box<dyn Animation> {
     let ph = 2 * h;
-    let near = (ph as f32 * 0.26).min(w as f32 * 0.17).clamp(6.0, 52.0);
+    let near = (ph as f32 * 0.13).min(w as f32 * 0.085).clamp(6.0, 26.0);
     let mut t = Toasters {
         w,
         ph,
@@ -278,7 +278,7 @@ pub fn new(w: usize, h: usize, rng: &mut Rng) -> Box<dyn Animation> {
         size: LAYERS.map(|(k, _)| near * k),
         level: 1,
     };
-    let n = ((w * ph) as f32 / (near * near * 2.6)).round().clamp(3.0, 40.0) as usize;
+    let n = ((w * ph) as f32 / (near * near * 5.0)).round().clamp(3.0, 40.0) as usize;
     for _ in 0..n {
         let mut f = t.spawn(rng);
         // Fill the screen from the start instead of waiting for a first wave.
