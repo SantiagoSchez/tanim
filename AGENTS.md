@@ -53,10 +53,10 @@ Before finishing any change: the build must have **zero warnings**, `cargo test 
 
 ### Workflow for new animations
 
-1. Each requested animation goes on its own branch, `anim/<name>`, created from an up-to-date `main`. Commit the work there (animation, catalog entry, README row, tests) and stop: do not push or open a PR yet.
-2. The maintainer reviews it locally (`./target/release/tanim <name>`, `make html` for the web version) and may ask for changes on the same branch.
-3. Only when they say it is OK, push the branch and open a PR against `main` with `gh pr create`. Never merge it or push to `main` yourself.
-4. The web version only offers Stream Deck downloads for GIFs that exist, so a new animation has none until `make streamdeck` and `make streamdeck-publish` are run after the merge; do that, or refresh `docs/gallery/`, only when asked.
+1. Work on a branch of its own, `anim/<name>`, created from an up-to-date `main`, and commit there (module, catalog entry, README row, tests).
+2. Leave it for review by whoever asked for it before anything leaves the machine: do not push or open a pull request until they say so, and apply their feedback as further commits on the same branch.
+3. Once approved, push the branch and open a pull request against `main`. Never merge it or push to `main` directly.
+4. Contributors do not need to generate Stream Deck GIFs. The live demo only offers downloads for GIFs that exist, and they are published separately with `make streamdeck-publish`, which needs push access to the repository.
 
 Tests live next to the code (`#[cfg(test)] mod tests`): for example `dog` checks that its camera never crops the dog, `zoom` that 1x is a pass-through, and `canvas` the transparency and deadband rules. Add one when a behaviour can regress silently.
 
