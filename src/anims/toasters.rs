@@ -661,7 +661,7 @@ pub fn new(w: usize, h: usize, rng: &mut Rng) -> Box<dyn Animation> {
         level: 1,
         t: 0,
     };
-    let n = ((w * ph) as f32 / (near * near * 5.0)).round().clamp(3.0, 40.0) as usize;
+    let n = ((w * ph) as f32 / (near * near * 9.0)).round().clamp(3.0, 40.0) as usize;
     for _ in 0..n {
         let mut f = t.spawn(rng);
         // Fill the screen from the start instead of waiting for a first wave.
