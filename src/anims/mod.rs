@@ -73,6 +73,6 @@ catalog! {
     snake,     20, "Self-playing snake chasing apples";
     tetris,    30, "Self-playing Tetris";
     pipes,     40, "The classic 3D pipes screensaver", clear = pipes::BG;
-    toasters,  20, "Flying toasters and toast, after the classic After Dark screensaver", clear = toasters::BG;
+    toasters,  20, "Flying toasters, toast and breakfast guests, after the classic After Dark screensaver", clear = toasters::BG;
     city,      15, "Night city skyline scrolling by";
 }

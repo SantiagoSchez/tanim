@@ -107,7 +107,7 @@ Resizing the window restarts the animation at the new size. The animations with 
 | `snake` | Self-playing Snake |
 | `tetris` | Self-playing Tetris |
 | `pipes` | The classic 3D pipes screensaver |
-| `toasters` | Flying toasters and slices of toast, after the classic After Dark screensaver (Space: how toasted) |
+| `toasters` | Flying toasters in chrome and fifties enamel, popping toast, with a winged coffee mug, jam jar, fried egg and croissant tagging along; after the classic After Dark screensaver (Space: how toasted) |
 | `city` | A night skyline scrolling by, with traffic and planes |
 
 ## On the web
