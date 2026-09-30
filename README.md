@@ -104,6 +104,7 @@ Resizing the window restarts the animation at the new size. The animations with 
 | `neurons` | Neurons under a microscope, firing in cascades across their synapses |
 | `sand` | Colored sand falling into dunes |
 | `maze` | A maze carving itself, then being solved |
+| `maze3d` | The classic 3D maze screensaver: a first-person walk through brick corridors past rats and spinning polyhedra that turn the world upside down, to the smiley at the exit (Space: map) |
 | `snake` | Self-playing Snake |
 | `tetris` | Self-playing Tetris |
 | `pipes` | The classic 3D pipes screensaver |
