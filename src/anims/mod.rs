@@ -70,6 +70,7 @@ catalog! {
     neurons,   30, "Neurons firing and signalling across synapses", clear = neurons::BG;
     sand,      30, "Falling colored sand piling into dunes";
     maze,      60, "A maze carving itself, then being solved";
+    maze3d,    30, "The classic 3D maze screensaver: a walk through brick corridors to the smiley";
     snake,     20, "Self-playing snake chasing apples";
     tetris,    30, "Self-playing Tetris";
     pipes,     40, "The classic 3D pipes screensaver", clear = pipes::BG;

@@ -94,6 +94,8 @@ TWEAKS = {
     "matrix": {"warmup": 60},
     "starfield": {"warmup": 30},
     "maze": {"seconds": 14},
+    # Past the fade-in, on the START sign.
+    "maze3d": {"warmup": 20},
     "dog": {"seconds": 20},
     # Long enough to see a level being built and then explored.
     "dungeon": {"seconds": 30},
